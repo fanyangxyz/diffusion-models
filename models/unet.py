@@ -8,6 +8,8 @@ import numpy as np
 # TODOs:
 # - Add normalization
 # - Add residual block
+# - Add position embedding
+# - Set up learning rate warm up and decay
 
 
 class Block(nn.Module):
