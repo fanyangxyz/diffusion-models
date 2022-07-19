@@ -63,7 +63,7 @@ def main():
 
     # initialize a trainer instance and kick off training
     tconf = TrainerConfig(max_epochs=20, batch_size=64, learning_rate=3e-3,
-                          betas=(0.9, 0.95), weight_decay=0,
+                          betas=(0.9, 0.95), weight_decay=0.1,
                           lr_decay=False, ckpt_path=FLAGS.ckpt_path, num_workers=8)
     trainer = Trainer(model, train_dataset, test_dataset, tconf)
 
