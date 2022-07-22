@@ -27,7 +27,8 @@ def main():
 
             run = wandb.init(
                 project=args.project_name,
-                entity='treaptofun',
+                # entity='treaptofun',
+                entity = 'fanyangxyz33',
                 config=vars(args),
                 name=args.run_name,
             )
