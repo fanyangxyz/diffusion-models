@@ -14,7 +14,8 @@ def main():
 
     try:
         diffusion = script_utils.get_diffusion_from_args(args).to(device)
-        optimizer = torch.optim.Adam(diffusion.parameters(), lr=args.learning_rate)
+        optimizer = torch.optim.Adam(
+            diffusion.parameters(), lr=args.learning_rate)
 
         if args.model_checkpoint is not None:
             diffusion.load_state_dict(torch.load(args.model_checkpoint))
@@ -23,7 +24,8 @@ def main():
 
         if args.log_to_wandb:
             if args.project_name is None:
-                raise ValueError("args.log_to_wandb set to True but args.project_name is None")
+                raise ValueError(
+                    "args.log_to_wandb set to True but args.project_name is None")
 
             run = wandb.init(
                 project=args.project_name,
@@ -56,8 +58,9 @@ def main():
             drop_last=True,
             num_workers=2,
         ))
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, drop_last=True, num_workers=2)
-        
+        test_loader = DataLoader(
+            test_dataset, batch_size=batch_size, drop_last=True, num_workers=2)
+
         acc_train_loss = 0
 
         for iteration in range(1, args.iterations + 1):
@@ -79,7 +82,7 @@ def main():
             optimizer.step()
 
             diffusion.update_ema()
-            
+
             if iteration % args.log_rate == 0:
                 test_loss = 0
                 with torch.no_grad():
@@ -94,13 +97,15 @@ def main():
                             loss = diffusion(x)
 
                         test_loss += loss.item()
-                
+
                 if args.use_labels:
-                    samples = diffusion.sample(10, device, y=torch.arange(10, device=device))
+                    samples = diffusion.sample(
+                        10, device, y=torch.arange(10, device=device))
                 else:
                     samples = diffusion.sample(10, device)
-                
-                samples = ((samples + 1) / 2).clip(0, 1).permute(0, 2, 3, 1).numpy()
+
+                samples = ((samples + 1) / 2).clip(0,
+                                                   1).permute(0, 2, 3, 1).numpy()
 
                 test_loss /= len(test_loader)
                 acc_train_loss /= args.log_rate
@@ -112,14 +117,14 @@ def main():
                 })
 
                 acc_train_loss = 0
-            
+
             if iteration % args.checkpoint_rate == 0:
                 model_filename = f"{args.log_dir}/{args.project_name}-{args.run_name}-iteration-{iteration}-model.pth"
                 optim_filename = f"{args.log_dir}/{args.project_name}-{args.run_name}-iteration-{iteration}-optim.pth"
 
                 torch.save(diffusion.state_dict(), model_filename)
                 torch.save(optimizer.state_dict(), optim_filename)
-        
+
         if args.log_to_wandb:
             run.finish()
     except KeyboardInterrupt:
@@ -129,7 +134,8 @@ def main():
 
 
 def create_argparser():
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device(
+        "cuda") if torch.cuda.is_available() else torch.device("cpu")
     run_name = datetime.datetime.now().strftime("ddpm-%Y-%m-%d-%H-%M")
     defaults = dict(
         learning_rate=2e-4,

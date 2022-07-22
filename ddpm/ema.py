@@ -1,7 +1,7 @@
 class EMA():
     def __init__(self, decay):
         self.decay = decay
-    
+
     def update_average(self, old, new):
         if old is None:
             return new

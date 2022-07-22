@@ -63,8 +63,9 @@ class Downsample(nn.Module):
     def __init__(self, in_channels):
         super().__init__()
 
-        self.downsample = nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1)
-    
+        self.downsample = nn.Conv2d(
+            in_channels, in_channels, 3, stride=2, padding=1)
+
     def forward(self, x, time_emb, y):
         if x.shape[2] % 2 == 1:
             raise ValueError("downsampling tensor height should be even")
@@ -94,14 +95,14 @@ class Upsample(nn.Module):
             nn.Upsample(scale_factor=2, mode="nearest"),
             nn.Conv2d(in_channels, in_channels, 3, padding=1),
         )
-    
+
     def forward(self, x, time_emb, y):
         return self.upsample(x)
 
 
 class AttentionBlock(nn.Module):
     __doc__ = r"""Applies QKV self-attention with a residual connection.
-    
+
     Input:
         x: tensor of shape (N, in_channels, H, W)
         norm (string or None): which normalization to use (instance, group, batch, or none). Default: "gn"
@@ -111,9 +112,10 @@ class AttentionBlock(nn.Module):
     Args:
         in_channels (int): number of input channels
     """
+
     def __init__(self, in_channels, norm="gn", num_groups=32):
         super().__init__()
-        
+
         self.in_channels = in_channels
         self.norm = get_norm(norm, in_channels, num_groups)
         self.to_qkv = nn.Conv2d(in_channels, in_channels * 3, 1)
@@ -121,7 +123,8 @@ class AttentionBlock(nn.Module):
 
     def forward(self, x):
         b, c, h, w = x.shape
-        q, k, v = torch.split(self.to_qkv(self.norm(x)), self.in_channels, dim=1)
+        q, k, v = torch.split(self.to_qkv(self.norm(x)),
+                              self.in_channels, dim=1)
 
         q = q.permute(0, 2, 3, 1).view(b, h * w, c)
         k = k.view(b, c, h * w)
@@ -183,24 +186,33 @@ class ResidualBlock(nn.Module):
             nn.Conv2d(out_channels, out_channels, 3, padding=1),
         )
 
-        self.time_bias = nn.Linear(time_emb_dim, out_channels) if time_emb_dim is not None else None
-        self.class_bias = nn.Embedding(num_classes, out_channels) if num_classes is not None else None
+        self.time_bias = nn.Linear(
+            time_emb_dim,
+            out_channels) if time_emb_dim is not None else None
+        self.class_bias = nn.Embedding(
+            num_classes, out_channels) if num_classes is not None else None
 
-        self.residual_connection = nn.Conv2d(in_channels, out_channels, 1) if in_channels != out_channels else nn.Identity()
-        self.attention = nn.Identity() if not use_attention else AttentionBlock(out_channels, norm, num_groups)
-    
+        self.residual_connection = nn.Conv2d(
+            in_channels,
+            out_channels,
+            1) if in_channels != out_channels else nn.Identity()
+        self.attention = nn.Identity() if not use_attention else AttentionBlock(
+            out_channels, norm, num_groups)
+
     def forward(self, x, time_emb=None, y=None):
         out = self.activation(self.norm_1(x))
         out = self.conv_1(out)
 
         if self.time_bias is not None:
             if time_emb is None:
-                raise ValueError("time conditioning was specified but time_emb is not passed")
+                raise ValueError(
+                    "time conditioning was specified but time_emb is not passed")
             out += self.time_bias(self.activation(time_emb))[:, :, None, None]
 
         if self.class_bias is not None:
             if y is None:
-                raise ValueError("class conditioning was specified but y is not passed")
+                raise ValueError(
+                    "class conditioning was specified but y is not passed")
 
             out += self.class_bias(y)[:, :, None, None]
 
@@ -263,7 +275,7 @@ class UNet(nn.Module):
             nn.SiLU(),
             nn.Linear(time_emb_dim, time_emb_dim),
         ) if time_emb_dim is not None else None
-    
+
         self.init_conv = nn.Conv2d(img_channels, base_channels, 3, padding=1)
 
         self.downs = nn.ModuleList()
@@ -289,11 +301,10 @@ class UNet(nn.Module):
                 ))
                 now_channels = out_channels
                 channels.append(now_channels)
-            
+
             if i != len(channel_mults) - 1:
                 self.downs.append(Downsample(now_channels))
                 channels.append(now_channels)
-        
 
         self.mid = nn.ModuleList([
             ResidualBlock(
@@ -336,15 +347,15 @@ class UNet(nn.Module):
                     use_attention=i in attention_resolutions,
                 ))
                 now_channels = out_channels
-            
+
             if i != 0:
                 self.ups.append(Upsample(now_channels))
-        
+
         assert len(channels) == 0
-        
+
         self.out_norm = get_norm(norm, base_channels, num_groups)
         self.out_conv = nn.Conv2d(base_channels, img_channels, 3, padding=1)
-    
+
     def forward(self, x, time=None, y=None):
         ip = self.initial_pad
         if ip != 0:
@@ -352,15 +363,17 @@ class UNet(nn.Module):
 
         if self.time_mlp is not None:
             if time is None:
-                raise ValueError("time conditioning was specified but tim is not passed")
-            
+                raise ValueError(
+                    "time conditioning was specified but tim is not passed")
+
             time_emb = self.time_mlp(time)
         else:
             time_emb = None
-        
+
         if self.num_classes is not None and y is None:
-            raise ValueError("class conditioning was specified but y is not passed")
-        
+            raise ValueError(
+                "class conditioning was specified but y is not passed")
+
         x = self.init_conv(x)
 
         skips = [x]
@@ -368,10 +381,10 @@ class UNet(nn.Module):
         for layer in self.downs:
             x = layer(x, time_emb, y)
             skips.append(x)
-        
+
         for layer in self.mid:
             x = layer(x, time_emb, y)
-        
+
         for layer in self.ups:
             if isinstance(layer, ResidualBlock):
                 x = torch.cat([x, skips.pop()], dim=1)
@@ -379,7 +392,7 @@ class UNet(nn.Module):
 
         x = self.activation(self.out_norm(x))
         x = self.out_conv(x)
-        
+
         if self.initial_pad != 0:
             return x[:, :, ip:-ip, ip:-ip]
         else:

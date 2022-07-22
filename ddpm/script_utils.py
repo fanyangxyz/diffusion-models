@@ -19,6 +19,7 @@ def cycle(dl):
         for data in dl:
             yield data
 
+
 def get_transform():
     # class RescaleChannels(object):
     #     def __call__(self, sample):
