@@ -2,6 +2,7 @@ import argparse
 import torchvision
 import torch.nn.functional as F
 
+
 from .unet import UNet
 from .diffusion import (
     GaussianDiffusion,
@@ -19,13 +20,14 @@ def cycle(dl):
             yield data
 
 def get_transform():
-    class RescaleChannels(object):
-        def __call__(self, sample):
-            return 2 * sample - 1
+    # class RescaleChannels(object):
+    #     def __call__(self, sample):
+    #         return 2 * sample - 1
 
     return torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
-        RescaleChannels(),
+        # This is not working.
+        # RescaleChannels(),
     ])
 
 
