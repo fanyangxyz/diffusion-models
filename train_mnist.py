@@ -90,6 +90,7 @@ def main():
                 with torch.no_grad():
                     diffusion.eval()
                     for x, y in test_loader:
+                        print('testing...')
                         x = x.to(device)
                         y = y.to(device)
 
@@ -99,8 +100,10 @@ def main():
                             loss = diffusion(x)
 
                         test_loss += loss.item()
-                        # break # debug
+                        if args.debug:
+                            break # debug
 
+                print('sampling...')
                 if args.use_labels:
                     samples = diffusion.sample(
                         args.sample_batch_size, device, y=torch.arange(10, device=device))
@@ -161,6 +164,7 @@ def create_argparser():
         schedule_high=0.02,
 
         device=device,
+        debug=False,
     )
     defaults.update(script_utils.diffusion_defaults())
 
