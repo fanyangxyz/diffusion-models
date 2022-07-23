@@ -1,4 +1,5 @@
 import argparse
+import torch
 import torchvision
 import torch.nn.functional as F
 
@@ -111,6 +112,11 @@ def get_diffusion_from_args(args):
             args.schedule_low * 1000 / args.num_timesteps,
             args.schedule_high * 1000 / args.num_timesteps,
         )
+
+    if args.device == torch.device('cuda'):
+        model = torch.nn.DataParallel(model)
+    else:
+        assert args.device == torch.device('cpu')
 
     diffusion = GaussianDiffusion(
         model, (28, 28), 1, 10,
