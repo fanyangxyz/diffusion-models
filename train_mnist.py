@@ -67,6 +67,7 @@ def main():
             diffusion.train()
 
             x, y = next(train_loader)
+
             x = x.to(device)
             y = y.to(device)
 
@@ -97,24 +98,26 @@ def main():
                             loss = diffusion(x)
 
                         test_loss += loss.item()
+                        # break # debug
 
                 if args.use_labels:
                     samples = diffusion.sample(
-                        10, device, y=torch.arange(10, device=device))
+                        args.sample_batch_size, device, y=torch.arange(10, device=device))
                 else:
-                    samples = diffusion.sample(10, device)
+                    samples = diffusion.sample(args.sample_batch_size, device)
 
-                samples = ((samples + 1) / 2).clip(0,
-                                                   1).permute(0, 2, 3, 1).numpy()
+                samples = script_utils.inv_transform(samples).clip(0,
+                                                                   1).permute(0, 2, 3, 1).numpy()
 
                 test_loss /= len(test_loader)
                 acc_train_loss /= args.log_rate
 
-                wandb.log({
-                    "test_loss": test_loss,
-                    "train_loss": acc_train_loss,
-                    "samples": [wandb.Image(sample) for sample in samples],
-                })
+                if args.log_to_wandb:
+                    wandb.log({
+                        "test_loss": test_loss,
+                        "train_loss": acc_train_loss,
+                        "samples": [wandb.Image(sample) for sample in samples],
+                    })
 
                 acc_train_loss = 0
 
@@ -140,6 +143,7 @@ def create_argparser():
     defaults = dict(
         learning_rate=2e-4,
         batch_size=128,
+        sample_batch_size=10,
         iterations=800000,
 
         log_to_wandb=True,
