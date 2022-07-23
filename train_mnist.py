@@ -64,6 +64,7 @@ def main():
         acc_train_loss = 0
 
         for iteration in range(1, args.iterations + 1):
+            print(f'iteration {iteration}')
             diffusion.train()
 
             x, y = next(train_loader)
