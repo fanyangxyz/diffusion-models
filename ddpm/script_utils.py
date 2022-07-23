@@ -21,15 +21,14 @@ def cycle(dl):
 
 
 def get_transform():
-    # class RescaleChannels(object):
-    #     def __call__(self, sample):
-    #         return 2 * sample - 1
-
     return torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
-        # This is not working.
-        # RescaleChannels(),
+        torchvision.transforms.Normalize((0.1307,), (0.3081,))
     ])
+
+
+def inv_transform(x):
+    return x * 0.3081 - 0.1307
 
 
 def str2bool(v):
