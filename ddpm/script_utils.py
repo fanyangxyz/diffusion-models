@@ -101,7 +101,7 @@ def get_diffusion_from_args(args):
         attention_resolutions=args.attention_resolutions,
 
         num_classes=None if not args.use_labels else 10,
-        initial_pad=0,
+        initial_pad=2,
     )
 
     if args.schedule == "cosine":
