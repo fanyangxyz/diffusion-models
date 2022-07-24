@@ -178,7 +178,7 @@ def create_argparser():
         log_to_wandb=True,
         log_rate=1000,
         checkpoint_rate=1000,
-        log_dir="~/ddpm_logs",
+        log_dir="ddpm_logs",
         project_name='diffusion-models-mnist',
         run_name=run_name,
 
