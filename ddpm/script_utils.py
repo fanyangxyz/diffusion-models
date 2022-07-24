@@ -21,15 +21,25 @@ def cycle(dl):
             yield data
 
 
-def get_transform():
+def get_transform_mnist():
     return torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.1307,), (0.3081,))
     ])
 
 
-def inv_transform(x):
+def get_transform_cifar():
+    return torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+
+def inv_transform_mnist(x):
     return x * 0.3081 - 0.1307
+
+
+def inv_transform_cifar(x):
+    return x * 0.5 + 0.5
 
 
 def str2bool(v):

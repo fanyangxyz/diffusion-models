@@ -45,14 +45,14 @@ def main():
                 root='./mnist_train',
                 train=True,
                 download=True,
-                transform=script_utils.get_transform(),
+                transform=script_utils.get_transform_mnist(),
             )
 
             test_dataset = datasets.MNIST(
                 root='./mnist_test',
                 train=False,
                 download=True,
-                transform=script_utils.get_transform(),
+                transform=script_utils.get_transform_mnist(),
             )
 
         if args.use_cifar:
@@ -60,14 +60,14 @@ def main():
                 root='./cifar_train',
                 train=True,
                 download=True,
-                transform=script_utils.get_transform(),
+                transform=script_utils.get_transform_cifar(),
             )
 
             test_dataset = datasets.CIFAR10(
                 root='./cifar_test',
                 train=False,
                 download=True,
-                transform=script_utils.get_transform(),
+                transform=script_utils.get_transform_cifar(),
             )
 
         train_loader = script_utils.cycle(DataLoader(
@@ -129,8 +129,14 @@ def main():
                 else:
                     samples = diffusion.sample(args.sample_batch_size, device)
 
-                samples = script_utils.inv_transform(samples).clip(0,
-                                                                   1).permute(0, 2, 3, 1).numpy()
+                if args.use_mnist:
+                    inv_transform = script_utils.inv_transform_minist
+
+                if args.use_cifar:
+                    inv_transform = script_utils.inv_transform_cifar
+
+                samples = inv_transform(samples).clip(
+                    0, 1).permute(0, 2, 3, 1).numpy()
 
                 test_loss /= len(test_loader)
                 acc_train_loss /= args.log_rate
