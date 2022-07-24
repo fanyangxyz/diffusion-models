@@ -83,12 +83,16 @@ class GaussianDiffusion(nn.Module):
         self.register_buffer("sigma", to_torch(np.sqrt(betas)))
 
     def update_ema(self):
+        raw_model = self.model.module if hasattr(
+            self.model, "module") else self.model
+        raw_ema_model = self.ema_model.module if hasattr(
+            self.ema_model, "module") else self.ema_model
         self.step += 1
         if self.step % self.ema_update_rate == 0:
             if self.step < self.ema_start:
-                self.ema_model.load_state_dict(self.model.state_dict())
+                raw_ema_model.load_state_dict(raw_model.state_dict())
             else:
-                self.ema.update_model_average(self.ema_model, self.model)
+                self.ema.update_model_average(raw_ema_model, raw_model)
 
     @torch.no_grad()
     def remove_noise(self, x, t, y, use_ema=True):

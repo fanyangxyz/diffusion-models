@@ -1,4 +1,5 @@
 import argparse
+import torch
 import torchvision
 import torch.nn.functional as F
 
@@ -89,7 +90,7 @@ def get_diffusion_from_args(args):
     }
 
     model = UNet(
-        img_channels=1,
+        img_channels=args.img_channels,
 
         base_channels=args.base_channels,
         channel_mults=args.channel_mults,
@@ -100,7 +101,7 @@ def get_diffusion_from_args(args):
         attention_resolutions=args.attention_resolutions,
 
         num_classes=None if not args.use_labels else 10,
-        initial_pad=2,
+        initial_pad=args.initial_pad,
     )
 
     if args.schedule == "cosine":
@@ -112,8 +113,13 @@ def get_diffusion_from_args(args):
             args.schedule_high * 1000 / args.num_timesteps,
         )
 
+    if args.device == torch.device('cuda'):
+        model = torch.nn.DataParallel(model)
+    else:
+        assert args.device == torch.device('cpu')
+
     diffusion = GaussianDiffusion(
-        model, (28, 28), 1, 10,
+        model, (args.img_size, args.img_size), args.img_channels, 10,
         betas,
         ema_decay=args.ema_decay,
         ema_update_rate=args.ema_update_rate,
