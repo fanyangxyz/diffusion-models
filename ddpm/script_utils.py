@@ -35,7 +35,7 @@ def get_transform_cifar():
 
 
 def inv_transform_mnist(x):
-    return x * 0.3081 - 0.1307
+    return x * 0.3081 + 0.1307
 
 
 def inv_transform_cifar(x):
