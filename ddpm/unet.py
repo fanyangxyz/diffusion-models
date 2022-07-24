@@ -356,6 +356,9 @@ class UNet(nn.Module):
         self.out_norm = get_norm(norm, base_channels, num_groups)
         self.out_conv = nn.Conv2d(base_channels, img_channels, 3, padding=1)
 
+        print("number of parameters: %e", sum(p.numel()
+              for p in self.parameters()))
+
     def forward(self, x, time=None, y=None):
         ip = self.initial_pad
         if ip != 0:
