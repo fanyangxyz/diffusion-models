@@ -96,38 +96,13 @@ class GaussianDiffusion(nn.Module):
 
     @torch.no_grad()
     def remove_noise(self, x, t, y, use_ema=True):
-        if use_ema:
-            return (
-                (x - extract(self.remove_noise_coeff, t, x.shape) * self.ema_model(x, t, y)) *
-                extract(self.reciprocal_sqrt_alphas, t, x.shape)
-            )
-        else:
-            return (
-                (x - extract(self.remove_noise_coeff, t, x.shape) * self.model(x, t, y)) *
-                extract(self.reciprocal_sqrt_alphas, t, x.shape)
-            )
+        model = self.ema_model if use_ema else self.model
+        return ((x - extract(self.remove_noise_coeff, t, x.shape) *
+                model(x, t, y)) * extract(self.reciprocal_sqrt_alphas, t, x.shape))
 
     @torch.no_grad()
-    def sample(self, batch_size, device, y=None, use_ema=True):
-        if y is not None and batch_size != len(y):
-            raise ValueError(
-                "sample batch size different from length of given y")
-
-        x = torch.randn(batch_size, self.img_channels,
-                        *self.img_size, device=device)
-
-        for t in range(self.num_timesteps - 1, -1, -1):
-            t_batch = torch.tensor([t], device=device).repeat(batch_size)
-            x = self.remove_noise(x, t_batch, y, use_ema)
-
-            if t > 0:
-                x += extract(self.sigma, t_batch, x.shape) * \
-                    torch.randn_like(x)
-
-        return x.cpu().detach()
-
-    @torch.no_grad()
-    def sample_diffusion_sequence(self, batch_size, device, y=None, use_ema=True):
+    def sample(self, batch_size, device, y=None,
+               use_ema=True, return_sequence=False):
         if y is not None and batch_size != len(y):
             raise ValueError(
                 "sample batch size different from length of given y")
@@ -144,9 +119,13 @@ class GaussianDiffusion(nn.Module):
                 x += extract(self.sigma, t_batch, x.shape) * \
                     torch.randn_like(x)
 
-            diffusion_sequence.append(x.cpu().detach())
+            if return_sequence:
+                diffusion_sequence.append(x.cpu().detach())
 
-        return diffusion_sequence
+        if return_sequence:
+            return diffusion_sequence
+
+        return x.cpu().detach()
 
     def perturb_x(self, x, t, noise):
         return (
