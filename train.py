@@ -125,12 +125,13 @@ def main():
                 print('sampling...')
                 if args.use_labels:
                     samples = diffusion.sample(
-                        args.sample_batch_size, device, y=torch.arange(10, device=device))
+                        args.sample_batch_size, device, y=torch.arange(10, device=device), use_ddim=args.use_ddim)
                 else:
-                    samples = diffusion.sample(args.sample_batch_size, device)
+                    samples = diffusion.sample(
+                        args.sample_batch_size, device, use_ddim=args.use_ddim)
 
                 if args.use_mnist:
-                    inv_transform = script_utils.inv_transform_minist
+                    inv_transform = script_utils.inv_transform_mnist
 
                 if args.use_cifar:
                     inv_transform = script_utils.inv_transform_cifar

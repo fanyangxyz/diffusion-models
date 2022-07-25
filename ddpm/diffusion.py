@@ -64,12 +64,24 @@ class GaussianDiffusion(nn.Module):
 
         alphas = 1.0 - betas
         alphas_cumprod = np.cumprod(alphas)
+        alphas_cumprod_prev = np.append(1.0, alphas_cumprod[:-1])
+        sqrt_recip_alphas_cumprod = np.sqrt(1.0 / alphas_cumprod)
+        sqrt_recipm1_alphas_cumprod = np.sqrt(1.0 / alphas_cumprod - 1)
 
         to_torch = partial(torch.tensor, dtype=torch.float32)
 
         self.register_buffer("betas", to_torch(betas))
         self.register_buffer("alphas", to_torch(alphas))
         self.register_buffer("alphas_cumprod", to_torch(alphas_cumprod))
+        self.register_buffer(
+            "alphas_cumprod_prev",
+            to_torch(alphas_cumprod_prev))
+        self.register_buffer(
+            "sqrt_recip_alphas_cumprod",
+            to_torch(sqrt_recip_alphas_cumprod))
+        self.register_buffer(
+            "sqrt_recipm1_alphas_cumprod",
+            to_torch(sqrt_recipm1_alphas_cumprod))
 
         self.register_buffer("sqrt_alphas_cumprod",
                              to_torch(np.sqrt(alphas_cumprod)))
@@ -101,8 +113,40 @@ class GaussianDiffusion(nn.Module):
                 model(x, t, y)) * extract(self.reciprocal_sqrt_alphas, t, x.shape))
 
     @torch.no_grad()
+    def _predict_xstart_from_eps(self, x_t, t, eps):
+        assert x_t.shape == eps.shape
+        return (
+            extract(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t
+            - extract(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * eps
+        )
+
+    @torch.no_grad()
+    def ddim_sample(self, x, t, y, use_ema=True, eta=0):
+        model = self.ema_model if use_ema else self.model
+        eps = model(x, t, y)
+        pred_xstart = self._predict_xstart_from_eps(x, t, eps)
+        alpha_bar = extract(self.alphas_cumprod, t, x.shape)
+        alpha_bar_prev = extract(self.alphas_cumprod_prev, t, x.shape)
+        sigma = (
+            eta
+            * torch.sqrt((1 - alpha_bar_prev) / (1 - alpha_bar))
+            * torch.sqrt(1 - alpha_bar / alpha_bar_prev)
+        )
+        # Equation 12.
+        noise = torch.randn_like(x)
+        mean_pred = (
+            pred_xstart * torch.sqrt(alpha_bar_prev)
+            + torch.sqrt(1 - alpha_bar_prev - sigma ** 2) * eps
+        )
+        nonzero_mask = (
+            (t != 0).float().view(-1, *([1] * (len(x.shape) - 1)))
+        )  # no noise when t == 0
+        sample = mean_pred + nonzero_mask * sigma * noise
+        return sample
+
+    @torch.no_grad()
     def sample(self, batch_size, device, y=None,
-               use_ema=True, return_sequence=False):
+               use_ema=True, use_ddim=False, return_sequence=False):
         if y is not None and batch_size != len(y):
             raise ValueError(
                 "sample batch size different from length of given y")
@@ -111,9 +155,14 @@ class GaussianDiffusion(nn.Module):
                         *self.img_size, device=device)
         diffusion_sequence = [x.cpu().detach()]
 
-        for t in range(self.num_timesteps - 1, -1, -1):
+        num_timesteps = self.num_timesteps if not use_ddim else 250
+
+        for t in range(num_timesteps - 1, -1, -1):
             t_batch = torch.tensor([t], device=device).repeat(batch_size)
-            x = self.remove_noise(x, t_batch, y, use_ema)
+            if not use_ddim:
+                x = self.remove_noise(x, t_batch, y, use_ema)
+            else:
+                x = self.ddim_sample(x, t_batch, y, use_ema)
 
             if t > 0:
                 x += extract(self.sigma, t_batch, x.shape) * \

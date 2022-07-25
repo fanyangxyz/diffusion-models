@@ -76,6 +76,8 @@ def diffusion_defaults():
         loss_type="l2",
         use_labels=False,
 
+        use_ddim=False,
+
         base_channels=128,
         channel_mults=(1, 2, 2, 2),
         num_res_blocks=2,
