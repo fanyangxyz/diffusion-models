@@ -155,7 +155,8 @@ class GaussianDiffusion(nn.Module):
                         *self.img_size, device=device)
         diffusion_sequence = [x.cpu().detach()]
 
-        num_timesteps = self.num_timesteps if not use_ddim else 250
+        # DDIM is not working yet. Need spaced.
+        num_timesteps = self.num_timesteps  # if not use_ddim else 250
 
         for t in range(num_timesteps - 1, -1, -1):
             t_batch = torch.tensor([t], device=device).repeat(batch_size)
