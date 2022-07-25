@@ -161,12 +161,11 @@ class GaussianDiffusion(nn.Module):
             t_batch = torch.tensor([t], device=device).repeat(batch_size)
             if not use_ddim:
                 x = self.remove_noise(x, t_batch, y, use_ema)
+                if t > 0:
+                    x += extract(self.sigma, t_batch, x.shape) * \
+                        torch.randn_like(x)
             else:
                 x = self.ddim_sample(x, t_batch, y, use_ema)
-
-            if t > 0:
-                x += extract(self.sigma, t_batch, x.shape) * \
-                    torch.randn_like(x)
 
             if return_sequence:
                 diffusion_sequence.append(x.cpu().detach())
